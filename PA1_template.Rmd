@@ -1,20 +1,126 @@
-# Reproducible Research: Peer Assessment 1
+####Activity Monitoring Device Data Analysis
+
+It is now possible to collect a large amount of data about personal movement using activity monitoring devices such as a Fitbit, Nike Fuelband, or Jawbone Up. These type of devices are part of the “quantified self” movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. But these data remain under-utilized both because the raw data are hard to obtain and there is a lack of statistical methods and software for processing and interpreting the data.
 
 
-## Loading and preprocessing the data
+This assignment makes use of data from a personal activity monitoring device. This device collects data at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.
 
+Let's read data
+```{r}
+activitydata<-read.csv('activity.csv')
+```
 
+Step #2: Let's find mean total number of steps taken per day
 
-## What is mean total number of steps taken per day?
+```{r}
+totalsteps1<-aggregate(activitydata$steps, by=list(activitydata$date), FUN=sum,na.rm = TRUE)
+names(totalsteps1)<-c('date','steps')
+totalsteps1$date<-as.Date(totalsteps1$date, "%Y-%m-%d")
+```
 
+And then plot them on chart
+```{r}
+hist(totalsteps1$steps, breaks=nrow(totalsteps1),axes=F)
+axis(1, at=seq(1,max(totalsteps1$steps),max(totalsteps1$steps)/nrow(totalsteps1)),labels=totalsteps1$date)
+axis(2)
+```
 
+Finding mean and median of steps taken per day
+```{r}
+meanperdate<-aggregate(activitydata$steps, by=list(activitydata$date), FUN=mean,na.rm = TRUE)
+names(meanperdate)<-c('date','steps.mean')
+```
+Mean of steps on per day basis:
+```{r}
+meanperdate
+medianperdate<-aggregate(activitydata$steps, by=list(activitydata$date), FUN=median,na.rm = TRUE)
+names(medianperdate)<-c('date','steps.median')
+medianperdate
+```
+Mediand of steps on per day basis:
+```{r}
+meanperdate
+```
 
-## What is the average daily activity pattern?
+Finding and ploting mean of steps taken per interval:
+```{r}
+meanperinterval<-aggregate(activitydata$steps, by=list(activitydata$interval), FUN=mean,na.rm = TRUE)
+names(meanperinterval)<-c('interval','steps.mean')
+plot(meanperinterval$interval,meanperinterval$steps.mean,type="l")
+```
+Maximum mean out of all intervals is: `r meanperinterval[which(meanperinterval$steps.mean==max(meanperinterval$steps.mean)),]$interval `
 
+Number of rows containing NA values: `r nrow(subset(activitydata, is.na(activitydata$steps))) `
 
+Create new function to fill NA values with mean of steps taken for the day relevant to the row
+```{r}
+fillnas <- function(x){
+	for(i in 1:length(x)){
+		if(is.na(x[i,]$steps)){
+			subset<-x[which(x$date==x[i,]$date),]
+			tempmean<-mean(subset$steps,na.rm=T)
+			x[i,]$steps<-tempmean
+		}
+	}
+	return (x)
+}
+```
 
-## Imputing missing values
+Create new dataframe using above mentioned function
+```{r}
+datafilled<-fillnas(activitydata)
+```
 
+Calculate total number of steps per day after filling missing values and plot it:
+```{r}
+totalsteps2<-aggregate(datafilled$steps, by=list(datafilled$date), FUN=sum,na.rm = TRUE)
+names(totalsteps2)<-c('date','steps')
+totalsteps2$date<-as.Date(totalsteps2$date, "%Y-%m-%d")
+hist(totalsteps2$steps, breaks=nrow(totalsteps2),axes=F)
+axis(1, at=seq(1,max(totalsteps2$steps),max(totalsteps2$steps)/nrow(totalsteps2)),labels=totalsteps2$date)
+axis(2)
+```
 
+Find mean and median of steps taken per day with new datframe:
+```{r}
+meanperdate1<-aggregate(datafilled$steps, by=list(datafilled$date), FUN=mean,na.rm = TRUE)
+names(meanperdate1)<-c('date','steps.mean')
+```
+Mean of steps taken per day with new dataframe: 
 
-## Are there differences in activity patterns between weekdays and weekends?
+```{r}
+meanperdate1
+medianperdate1<-aggregate(datafilled$steps, by=list(datafilled$date), FUN=median,na.rm = TRUE)
+names(medianperdate1)<-c('date','steps.median')
+```
+Median of steps taken per day with new dataframe: 
+```{r}
+medianperdate1
+```
+
+Add new factor variable to data frame to identify weekdays and weekends:
+```{r}
+datafilled$date<-as.Date(datafilled$date, "%Y-%m-%d")
+datafilled[,'weekday']<-as.factor(weekdays(datafilled$date))
+datafilled<-transform(datafilled,weekday=ifelse(weekday %in% c('Saturday','Sunday'),'weekend','weekday'))
+```
+
+Create two subset dataframes for ease of plotting them:
+```{r}
+weekdaydata<-datafilled[which(datafilled$weekday=='weekday'),]
+weekenddata<-datafilled[which(datafilled$weekday=='weekend'),]
+```
+
+Find mean of steps taken per interval on weekdays and plot them:
+```{r}
+weekdaymeanperinterval<-aggregate(weekdaydata$steps, by=list(weekdaydata$interval), FUN=mean,na.rm = TRUE)
+names(weekdaymeanperinterval)<-c('interval','steps.mean')
+plot(weekdaymeanperinterval$interval,weekdaymeanperinterval$steps.mean,type="l")
+```
+
+Find mean of steps taken per interval on weekends and plot them:
+```{r}
+weekendmeanperinterval<-aggregate(weekenddata$steps, by=list(weekenddata$interval), FUN=mean,na.rm = TRUE)
+names(weekendmeanperinterval)<-c('interval','steps.mean')
+plot(weekendmeanperinterval$interval,weekendmeanperinterval$steps.mean,type="l")
+```
